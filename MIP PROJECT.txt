@@ -1,0 +1,1625 @@
+.INCLUDE "M32DEF.INC"
+
+.EQU  KEY_PORT  =  PORTC
+.EQU  KEY_PIN  =  PINC
+.EQU  KEY_DDR  =  DDRC
+
+.EQU  LCD_DPRT  =  PORTA
+.EQU  LCD_DDDR  =  DDRA
+.EQU  LCD_DPIN  =  PINA
+.EQU  LCD_CPRT  =  PORTB
+.EQU  LCD_CDDR  =  DDRB
+.EQU  LCD_CPIN  =  PINB
+.EQU  LCD_RS  =  0
+.EQU  LCD_RW  =  1
+.EQU  LCD_EN  =  2
+
+.org  0x00
+LDI  R16,  HIGH  (RAMEND)
+ OUT  SPH,R16
+LDI  R16,  LOW  (RAMEND)
+ OUT  SPL,R16
+LDI  R16,  0b11101111 ;  ascii  code  for  keypressed  displayed  on  PORTD 
+OUT  DDRA,R16
+LDI  R16,  0xF0  //portc  0-3  input  pins
+OUT  KEY_DDR,  R16
+
+GroundAllColumns:
+LDI  R16,  0x0F  //  portc  0-3  display  111 
+OUT  KEY_PORT,  R16
+
+LDI  R16,0xFF;
+OUT  LCD_DDDR,  R16   ;LCD  data  port  is  output
+ OUT  LCD_CDDR,  R16 ;  A,B  PORT  AS  OUTPUT
+  CBI  LCD_CPRT,LCD_EN
+
+CALL  DELAY_2ms  ;wait  for  power  on 
+LDI  R16,0x38  ;  FOR  7X5  DISPLAY
+CALL  CMNDWRT  ;call  command  function 
+CALL  DELAY_2ms  ;wait  2  ms
+LDI  R16,0x0E  ;display  on,  cursor  on
+ CALL  CMNDWRT  ;call  command  function 
+ LDI  R16,0x01  ;clear  LCD
+CALL CMNDWRT
+ CALL DELAY_2ms
+LDI  R16,0x06  ;  INCREMENT  CURSOR
+ CALL CMNDWRT
+
+ LDI YL, 0x00
+ LDI YH, 0x5
+
+ ;;;;;
+
+main:
+    ; Clear display first
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+show_menu:
+    ; Clear display
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; First line: "Menu:"
+    ldi r16, 0x80    
+    call cmndwrt
+    
+    ldi r16, 'M'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'n'
+    call datawrt
+    ldi r16, 'u'
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+
+    ; Second line: "Select Option"
+    ldi r16, 0xC0    
+    call cmndwrt
+    
+    ldi r16, 'S'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'l'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'c'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '1'
+    call datawrt
+    ldi r16, '-'
+    call datawrt
+    ldi r16, '5'     ; Updated to show 5 options
+    call datawrt
+
+menu_input:
+    call KPD_ISR     ; Get keypad input
+    
+    ; Compare with valid inputs
+    mov r22, r20     ; Save input in r22 for comparison
+    cpi r22, '1'
+    brne check_2
+    jmp preview_option1
+
+check_2:
+    cpi r22, '2'
+    brne check_3
+    jmp preview_option2
+
+check_3:
+    cpi r22, '3'
+    brne check_4
+    jmp preview_option3
+
+check_4:
+    cpi r22, '4'
+    brne check_5
+    jmp preview_option4
+
+check_5:
+    cpi r22, '5'
+    brne check_star
+    jmp preview_option5
+
+check_star:
+    cpi r22, '*'     ; Use * to refresh menu
+    brne menu_input
+    jmp show_menu
+
+preview_option1:
+    ; Clear display
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Show "Set Time"
+    ldi r16, 0x80
+    call cmndwrt
+    ldi r16, 'S'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'T'
+    call datawrt
+    ldi r16, 'i'
+    call datawrt
+    ldi r16, 'm'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+
+    ; Second line
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '1'
+    call datawrt
+
+wait_confirm1:
+    call KPD_ISR
+    mov r22, r20
+    cpi r22, '1'
+    brne check_back1
+    jmp exec_option1
+check_back1:
+    cpi r22, '*'
+    brne wait_confirm1
+    jmp back_to_menu
+
+preview_option2:
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Show "Set Prayers"
+    ldi r16, 0x80
+    call cmndwrt
+    ldi r16, 'S'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'y'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+
+    ; Second line
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '2'
+    call datawrt
+
+wait_confirm2:
+    call KPD_ISR
+    mov r22, r20
+    cpi r22, '2'
+    brne check_back2
+    jmp exec_option2
+check_back2:
+    cpi r22, '*'
+    brne wait_confirm2
+    jmp back_to_menu
+
+preview_option3:
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Show "Clock"
+    ldi r16, 0x80
+    call cmndwrt
+    ldi r16, 'N'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'x'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'y'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+	ldi r16, 'r'
+    call datawrt
+
+    ; Second line
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '3'
+    call datawrt
+
+wait_confirm3:
+    call KPD_ISR
+    mov r22, r20
+    cpi r22, '3'
+    brne check_back3
+    jmp exec_option3
+check_back3:
+    cpi r22, '*'
+    brne wait_confirm3
+    jmp back_to_menu
+
+preview_option4:
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Show "All Prayers"
+    ldi r16, 0x80
+    call cmndwrt
+    ldi r16, 'A'
+    call datawrt
+    ldi r16, 'l'
+    call datawrt
+    ldi r16, 'l'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'y'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+
+    ; Second line
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '4'
+    call datawrt
+
+wait_confirm4:
+    call KPD_ISR
+    mov r22, r20
+    cpi r22, '4'
+    brne check_back4
+    jmp exec_option4
+check_back4:
+    cpi r22, '*'
+    brne wait_confirm4
+    jmp back_to_menu
+
+preview_option5:
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Show "Prayer Times"
+    ldi r16, 0x80
+    call cmndwrt
+	ldi r16, 'L'
+    call datawrt
+    ldi r16, 'P'
+    call datawrt
+	ldi r16, ' '
+	call datawrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'y'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'T'
+    call datawrt
+    ldi r16, 'i'
+    call datawrt
+    ldi r16, 'm'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+
+    ; Second line
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, '5'
+    call datawrt
+
+wait_confirm5:
+    call KPD_ISR
+    mov r22, r20
+    cpi r22, '5'
+    brne check_back5
+    jmp exec_option5
+check_back5:
+    cpi r22, '*'
+    brne wait_confirm5
+    jmp back_to_menu
+
+back_to_menu:
+    jmp show_menu
+
+; Execution handlers
+exec_option1:
+    call current_time_input
+    jmp show_menu
+
+exec_option2:
+    call input_prayer_times
+    jmp show_menu
+
+exec_option3:
+    call next_prayer_time
+    jmp show_menu
+
+exec_option4:
+    call display_all_prayers
+    jmp show_menu
+
+exec_option5:
+    call prayer_times_menu
+    jmp show_menu
+
+	;;;;;
+
+
+KPD_ISR: 
+LDI  R21,  0b01111111
+OUT  KEY_PORT,R21
+NOP
+IN  R21,KEY_PIN
+
+ANDI  R21,0x0F
+ CPI  R21,0x0F
+ BRNE COL1
+
+LDI  R21,  0b10111111
+ OUT  KEY_PORT,  R21
+  NOP
+IN  R21,  KEY_PIN
+ ANDI  R21,0x0F
+  CPI  R21,0x0F
+   BRNE COL2
+
+LDI  R21,  0b11011111
+OUT  KEY_PORT,  R21
+NOP
+IN  R21,  KEY_PIN
+ ANDI  R21,0x0F
+  CPI  R21,0x0F
+   BRNE COL3
+
+ rjmp KPD_ISR
+COL1:
+LDI  R30,  LOW(KCODE0<<1)
+LDI  R31,  HIGH(KCODE0<<1)
+RJMP  Find
+ COL2:
+LDI  R30,  LOW(KCODE1<<1)
+ LDI  R31,  HIGH(KCODE1<<1)
+RJMP  Find
+ COL3:
+LDI  R30,  LOW(KCODE2<<1)
+ LDI  R31,  HIGH(KCODE2<<1)
+RJMP  Find
+
+Find:
+LSR R21
+BRCC  Match
+ LPM  R20,  Z+
+RJMP  Find MATCH:
+LPM  R20,  Z
+
+ldi  r17,0x0f
+ in  r16,pinc
+ andi  r16,0x0f
+ cp  r16,r17
+  breq  kpd_isr
+
+OUT  PORTA,  R20
+call  BDELAY
+RET
+
+
+.ORG  0x300
+kcode0: .db '3', '6', '9', '#'  ; Column 1
+kcode1: .db '2', '5', '8', '0'  ; Column 2
+kcode2: .db '1', '4', '7', '*'  ; Column 3
+;.org 0x400 has curr times
+;.org 0x500 has prayer times
+
+
+
+CMNDWRT:
+OUT  LCD_DPRT,  R16
+CBI  LCD_CPRT,LCD_RS
+CBI  LCD_CPRT,LCD_RW
+SBI  LCD_CPRT,LCD_EN
+CALL SDELAY
+CBI  LCD_CPRT,LCD_EN
+CALL DELAY_100us
+RET
+
+DATAWRT:
+OUT  LCD_DPRT,R16
+SBI  LCD_CPRT,LCD_RS
+CBI  LCD_CPRT,LCD_RW
+SBI  LCD_CPRT,LCD_EN
+CALL SDELAY
+CBI  LCD_CPRT,LCD_EN
+CALL DELAY_100us
+RET
+
+BDELAY:
+ldi  r19,  8
+la:call  delay
+ dec r19
+ brne la
+ret
+
+DELAY:
+PUSH R17
+ LDI R17,20
+ LDR1:
+CALL DELAY_2ms
+ DEC R17
+PUSH R17
+ LDI R17,20
+ LDR5:
+CALL DELAY_2ms
+ DEC R17
+BRNE LDR5
+ POP R17
+ BRNE LDR1
+  POP R17
+RET
+
+DELAY_2ms:
+PUSH R17
+LDI R17,20
+ LDR0:
+CALL DELAY_100us
+ DEC R17
+BRNE LDR0
+ POP R17
+ RET
+
+DELAY_100us:
+PUSH R17
+  LDI R17,60
+   DR0:
+     CALL SDELAY
+DEC R17
+ BRNE DR0
+  POP R17
+   RET
+
+   ;;;;;
+
+current_time_input:
+    ; Set up memory location for current time storage (0x400)
+    LDI YL, 0x00
+    LDI YH, 0x4      ; Store at 0x400
+
+    ldi r16, 0x01    ; Clear LCD
+    call cmndwrt
+    call DELAY_2ms
+    
+    ldi r16, 0x80    ; First line
+    call cmndwrt
+    call DELAY_2ms   
+    
+    ; Display "Time:" prompt
+    ldi r16, 'T'      
+    call datawrt
+    ldi r16, 'i'     
+    call datawrt
+    ldi r16, 'm'     
+    call datawrt
+    ldi r16, 'e'     
+    call datawrt
+    ldi r16, ':'     
+    call datawrt
+    call DELAY_2ms
+
+    ; Get hours tens digit
+    call KPD_ISR
+    st Y+, r20        
+    call DELAY_2ms
+    dec YL
+    ld r16, Y+       
+    call datawrt
+
+    ; Get hours ones digit
+    call KPD_ISR
+    st Y+, r20        
+    dec YL
+    ld r16, Y+       
+    call datawrt
+
+    ; Display colon
+    ldi r16, ':'
+    call datawrt
+
+    ; Get minutes tens digit
+    call KPD_ISR
+    st Y+, r20        
+    dec YL
+    ld r16, Y+       
+    call datawrt
+
+    ; Get minutes ones digit
+    call KPD_ISR
+    st Y+, r20        
+    dec YL
+    ld r16, Y+       
+    call datawrt
+
+    ; Initialize seconds to 0
+    ldi r16, '0'
+    st Y+, r16        ; Store initial seconds
+    
+    ; Now show real-time counter for 15 seconds
+    ldi r21, 15      ; Counter for 15 seconds
+    
+time_display_loop:    
+    ; Clear and position cursor
+    ldi r16, 0x01    ; Clear display
+    call cmndwrt
+    call DELAY_2ms
+    ldi r16, 0x80    ; First line
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Reset Y pointer to start of time
+    LDI YL, 0x00
+    LDI YH, 0x4
+    
+    ; Display hours
+    ld r16, Y+
+    call datawrt
+    ld r16, Y+
+    call datawrt
+    
+    ; Display first colon
+    ldi r16, ':'
+    call datawrt
+    
+    ; Display minutes
+    ld r16, Y+
+    call datawrt
+    ld r16, Y+
+    call datawrt
+    
+    ; Display second colon
+    ldi r16, ':'
+    call datawrt
+    
+    ; Display seconds
+    ld r16, Y
+    call datawrt
+    ldi r16, '0'
+    call datawrt
+
+    ; Wait one second
+    call DELAY_1s
+    
+    ; Update seconds
+    LDI YL, 0x04    ; Point to seconds
+    LDI YH, 0x04
+    ld r16, Y
+    inc r16
+    cpi r16, '6'    ; Check if seconds reached 6
+    brne store_seconds
+    
+    ; Reset seconds and increment minutes
+    ldi r16, '0'
+    st Y, r16       ; Reset seconds
+    
+    ; Update minutes ones digit
+    LDI YL, 0x03
+    ld r16, Y
+    inc r16
+    cpi r16, ':'    ; Check if passed '9'
+    brne store_min_ones
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update minutes tens
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, '6'    ; Check if minutes tens reached 6
+    brne store_min_tens
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update hours ones
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, ':'    ; Check if passed '9'
+    brne store_hour_ones
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update hours tens
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, '3'    ; Max 23 hours
+    brne store_hour_tens
+    ldi r16, '0'
+    st Y, r16
+    rjmp update_complete
+
+store_seconds:
+    st Y, r16
+    rjmp update_complete
+store_min_ones:
+    st Y, r16
+    rjmp update_complete
+store_min_tens:
+    st Y, r16
+    rjmp update_complete
+store_hour_ones:
+    st Y, r16
+    rjmp update_complete
+store_hour_tens:
+    st Y, r16
+
+update_complete:
+    dec r21         ; Decrement 15 second counter
+    tst r21         ; Test if counter is zero
+    breq exit_time_display
+    rjmp time_display_loop
+
+exit_time_display:
+    ret
+
+	;;;;;;;;;;;;;;;;;;
+
+next_prayer_time:
+    ; Add counter for prayer display (3 seconds)
+    ldi r25, 3     ; Show next prayer for 3 seconds
+
+    ; Clear display
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+next_time_display_loop:    
+    ; First display date on first line
+    ldi r16, 0x80    
+    call cmndwrt
+    
+    ; Display "Date: "
+    ldi r16, 'D'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    
+    ; Display Year: 2024
+    ldi r16, '2'
+    call datawrt
+    ldi r16, '0'
+    call datawrt
+    ldi r16, '2'
+    call datawrt
+    ldi r16, '4'
+    call datawrt
+    
+    ldi r16, '-'
+    call datawrt
+    
+    ; Display Month: 12
+    ldi r16, '1'
+    call datawrt
+    ldi r16, '2'
+    call datawrt
+    
+    ldi r16, '-'
+    call datawrt
+    
+    ; Display Day: 30
+    ldi r16, '3'
+    call datawrt
+    ldi r16, '0'
+    call datawrt
+
+    ; Move to second line for time
+    ldi r16, 0xC0    
+    call cmndwrt
+
+    ; Check if we're in prayer display mode (r25 > 0)
+    tst r25
+    breq show_clock_only
+
+show_next_prayer:
+    ; Display next prayer info
+    ; Compare current time with prayer times
+    LDI XL, 0x00    ; Current time pointer (0x400)
+    LDI XH, 0x4
+    LDI YL, 0x00    ; Prayer times pointer (0x500)
+    LDI YH, 0x5
+    ldi r18, 0      ; Prayer index counter
+
+check_prayer_loop:
+    ; [Previous prayer checking code remains the same]
+    ; After finding next prayer:
+    
+    ; Display "Next:"
+    ldi r16, 'N'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'x'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    
+    ; Display prayer name and time
+    mov r16, r18
+    call display_prayer_name
+    ldi r16, ' '
+    call datawrt
+    
+    ld r16, Y       ; Hours tens
+    call datawrt
+    ldd r16, Y+1    ; Hours ones
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    ldd r16, Y+2    ; Minutes tens
+    call datawrt
+    ldd r16, Y+3    ; Minutes ones
+    call datawrt
+
+    rjmp update_timee
+
+show_clock_only:
+    ; Display "Time:"
+    ldi r16, 'T'
+    call datawrt
+    ldi r16, 'i'
+    call datawrt
+    ldi r16, 'm'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    
+    ; Display current time
+    LDI YL, 0x00
+    LDI YH, 0x4
+    
+    ; Hours
+    ld r16, Y+
+    call datawrt
+    ld r16, Y+
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    
+    ; Minutes
+    ld r16, Y+
+    call datawrt
+    ld r16, Y+
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    
+    ; Seconds
+    ld r16, Y
+    call datawrt
+    ldi r16, '0'
+    call datawrt
+
+update_timee:
+    ; Wait 1 second
+    call DELAY_1s
+    
+    ; Update seconds and check rollovers
+; Update seconds and check rollovers
+    LDI YL, 0x04
+    LDI YH, 0x04
+    ld r16, Y
+    inc r16
+    cpi r16, '6'
+    brne store_seconds_far
+    
+    ; Reset seconds and update minutes
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update minutes ones
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, ':'
+    brne store_min_ones_far
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update minutes tens
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, '6'
+    brne store_min_tens_far
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update hours ones
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, ':'
+    brne store_hr_ones_far
+    ldi r16, '0'
+    st Y, r16
+    
+    ; Update hours tens
+    dec YL
+    ld r16, Y
+    inc r16
+    cpi r16, '3'
+    brne store_hr_tens_far
+    ldi r16, '0'
+    st Y, r16
+    jmp time_done
+
+store_seconds_far:
+    jmp store_secondss
+
+store_min_ones_far:
+    jmp store_min_oness
+
+store_min_tens_far:
+    jmp store_min_tenss
+
+store_hr_ones_far:
+    jmp store_hr_ones
+
+store_hr_tens_far:
+    jmp store_hr_tens
+
+; Place these labels closer to time_done
+store_secondss:
+    st Y, r16
+    jmp time_done
+
+store_min_oness:
+    st Y, r16
+    jmp time_done
+
+store_min_tenss:
+    st Y, r16
+    jmp time_done
+
+store_hr_ones:
+    st Y, r16
+    jmp time_done
+
+store_hr_tens:
+    st Y, r16
+    jmp time_done
+
+time_done:
+    ; If we're showing prayer (r25 > 0), decrement counter
+    tst r25
+    breq check_prayer_trigger
+    dec r25
+    rjmp continue_display
+
+check_prayer_trigger:
+    ; Check if we just passed a prayer time
+    ; If yes, set r25 to 3 to show next prayer
+    call check_prayer_passed
+    tst r16         ; r16 will be 1 if prayer just passed
+    breq continue_display
+    ldi r25, 3      ; Show prayer for 3 seconds
+
+continue_display:
+    rjmp next_time_display_loop
+
+check_prayer_passed:
+    ; Subroutine to check if we just passed a prayer time
+    ; Returns 1 in r16 if yes, 0 if no
+    push YL
+    push YH
+    ; [Prayer time checking code]
+    pop YH
+    pop YL
+    ret
+
+
+	;;;;;;;;;;;;;;;;;;;;;;
+
+
+; Prayer name display subroutines - used by both input and display
+display_prayer_name:
+    cpi r18, 0
+    breq write_fajr
+    cpi r18, 1
+    breq write_zuhr
+    cpi r18, 2
+    breq write_asr
+    cpi r18, 3
+    breq write_maghrib
+    cpi r18, 4
+    breq write_isha
+    ret
+
+write_fajr:
+    ldi r16, 'F'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'j'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ret
+
+write_zuhr:
+    ldi r16, 'Z'
+    call datawrt
+    ldi r16, 'u'
+    call datawrt
+    ldi r16, 'h'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ret
+
+write_asr:
+    ldi r16, 'A'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ret
+
+write_maghrib:
+    ldi r16, 'M'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'g'
+    call datawrt
+    ldi r16, 'h'
+    call datawrt
+    ret
+
+write_isha:
+    ldi r16, 'I'
+    call datawrt
+    ldi r16, 's'
+    call datawrt
+    ldi r16, 'h'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ret
+
+input_prayer_times:
+    ldi r18, 0                ; Counter for 5 prayers
+    LDI YL, 0x00             ; Start storing prayers at 0x500
+    LDI YH, 0x5
+
+input_prayer_loop:
+    ; Clear display and show prayer number
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+    ldi r16, 0x80
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Display which prayer is being input
+    call display_prayer_name
+    
+    ldi r16, ':'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+
+    ; Get and display hours tens
+    call KPD_ISR   
+    mov r16, r20    ; Copy value to r16 for display
+    call datawrt    ; Display the digit
+    st Y+, r20      ; Store in memory
+    call DELAY_2ms
+    
+    ; Get and display hours ones
+    call KPD_ISR   
+    mov r16, r20
+    call datawrt
+    st Y+, r20
+    
+    ; Display colon
+    ldi r16, ':'
+    call datawrt
+    
+    ; Get and display minutes tens
+    call KPD_ISR   
+    mov r16, r20
+    call datawrt
+    st Y+, r20
+    
+    ; Get and display minutes ones
+    call KPD_ISR   
+    mov r16, r20
+    call datawrt
+    st Y+, r20
+    
+    call DELAY
+    inc r18
+    cpi r18, 5
+    brne input_prayer_loop
+    ret
+
+find_next_prayer:
+    ; Clear display
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+
+    ; Display "Next Prayer:"
+    ldi r16, 0x80    ; First line
+    call cmndwrt
+    
+    ldi r16, 'N'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'x'
+    call datawrt
+    ldi r16, 't'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    ldi r16, 'P'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'y'
+    call datawrt
+    ldi r16, 'e'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+
+    ; Compare current time with prayer times
+    LDI XL, 0x00    ; Current time pointer (0x400)
+    LDI XH, 0x4
+    LDI YL, 0x00    ; Prayer times pointer (0x500)
+    LDI YH, 0x5
+    ldi r23, 5      ; Counter for 5 prayers
+    ldi r24, 0xFF   ; Store index of next prayer
+
+compare_times:
+    ; Compare hours tens
+    ld r16, X       ; Current hours tens
+    ld r17, Y       ; Prayer hours tens
+    cp r16, r17
+    brlo prayer_found
+    brne next_prayer_check
+
+    ; Same tens hour, check ones
+    ; Instead of ldd, use pointer manipulation
+    adiw X, 1      ; Move X pointer to next position
+    adiw Y, 1      ; Move Y pointer to next position
+    ld r16, X      ; Current hours ones
+    ld r17, Y      ; Prayer hours ones
+    cp r16, r17
+    brlo prayer_found_adjust
+    brne next_prayer_check_adjust
+
+    ; Same hour, check minutes tens
+    adiw X, 1
+    adiw Y, 1
+    ld r16, X      ; Current minutes tens
+    ld r17, Y      ; Prayer minutes tens
+    cp r16, r17
+    brlo prayer_found_adjust
+    brne next_prayer_check_adjust
+
+    ; Same minutes tens, check ones
+    adiw X, 1
+    adiw Y, 1
+    ld r16, X      ; Current minutes ones
+    ld r17, Y      ; Prayer minutes ones
+    cp r16, r17
+    brlo prayer_found_adjust
+
+next_prayer_check_adjust:
+    ; Reset X pointer to start
+    LDI XL, 0x00    
+    LDI XH, 0x4
+    ; Y will be adjusted in next_prayer_check
+    rjmp next_prayer_check
+
+prayer_found_adjust:
+    ; Reset X pointer before returning
+    LDI XL, 0x00    
+    LDI XH, 0x4
+    rjmp prayer_found
+
+next_prayer_check:
+    adiw Y, 4      ; Move to next prayer time
+    dec r23
+    brne compare_times
+    
+    ; If no prayer found, point to first prayer (next day)
+    LDI YL, 0x00
+    LDI YH, 0x5
+    ldi r18, 0     ; First prayer
+    rjmp show_found_prayer
+
+prayer_found:
+    mov r18, r23   ; Store current prayer index
+    dec r18        ; Adjust for 0-based index
+
+show_found_prayer:
+    ; Move to second line
+    ldi r16, 0xC0
+    call cmndwrt
+    
+    call display_prayer_name
+
+    ; Display time
+    ldi r16, ' '
+    call datawrt
+    
+    ; Display prayer time using pointer manipulation
+    ld r16, Y      ; Hours tens
+    call datawrt
+    adiw Y, 1
+    ld r16, Y      ; Hours ones
+    call datawrt
+    ldi r16, ':'
+    call datawrt
+    adiw Y, 1
+    ld r16, Y      ; Minutes tens
+    call datawrt
+    adiw Y, 1
+    ld r16, Y      ; Minutes ones
+    call datawrt
+
+    ; Display for 5 seconds
+    ldi r21, 5
+final_display_loop:    ; Renamed from next_prayer_display
+    call DELAY_1s
+    dec r21
+    brne final_display_loop
+    ret
+
+
+	;;;;;;;;;;;;;;;;;;;;
+
+
+display_all_prayers:
+    ; Initialize starting position and counter
+    LDI YL, 0x00    ; Start of prayer times in SRAM
+    LDI YH, 0x5     ; 0x500
+    clr r22         ; Use r22 instead of r18 for prayer counter
+
+display_prayers_loop:
+    ; Clear display
+    ldi r16, 0x01
+    call cmndwrt
+    call DELAY_2ms
+    
+    ; Move to first line
+    ldi r16, 0x80
+    call cmndwrt
+    
+    ; Save Y pointer and r22
+    push YL
+    push YH
+    
+    ; Copy prayer counter to r18 for display_prayer_name
+    mov r18, r22
+    
+    ; Display prayer name
+    call display_prayer_name
+    
+    ; Restore Y pointer
+    pop YH
+    pop YL
+    
+    ; Display time
+    ldi r16, ' '
+    call datawrt
+    
+    ; Display hours tens
+    ld r16, Y
+    call datawrt
+    adiw Y, 1
+    
+    ; Display hours ones
+    ld r16, Y
+    call datawrt
+    adiw Y, 1
+    
+    ; Display colon
+    ldi r16, ':'
+    call datawrt
+    
+    ; Display minutes tens
+    ld r16, Y
+    call datawrt
+    adiw Y, 1
+    
+    ; Display minutes ones
+    ld r16, Y
+    call datawrt
+    adiw Y, 1
+    
+    ; Wait 2 seconds
+    call DELAY_1s
+    call DELAY_1s
+    
+    ; Increment prayer counter and check if done
+    inc r22
+    cpi r22, 5
+    breq exit_display_all
+    
+    rjmp display_prayers_loop
+    
+exit_display_all:
+    ret
+
+
+	;;;;;;;;;;;;;;;;;;;;;
+
+
+prayer_times_menu:
+    ; Set up display
+    ldi r16, 0x01    ; Clear LCD
+    call cmndwrt
+    call DELAY_2ms
+    
+    ldi r16, 0x80    ; First line
+    call cmndwrt
+    call DELAY_2ms   
+    
+    ; Display "Select Day (1-7)"
+    ldi r16, 'S'      
+    call datawrt
+    ldi r16, 'e'     
+    call datawrt
+    ldi r16, 'l'     
+    call datawrt
+    ldi r16, 'e'     
+    call datawrt
+    ldi r16, 'c'     
+    call datawrt
+    ldi r16, 't'     
+    call datawrt
+    ldi r16, ' '     
+    call datawrt
+    ldi r16, 'D'     
+    call datawrt
+    ldi r16, 'a'     
+    call datawrt
+    ldi r16, 'y'     
+    call datawrt
+
+    ; Move to second line
+    ldi r16, 0xC0    
+    call cmndwrt
+    
+    ldi r16, '('      
+    call datawrt
+    ldi r16, '1'     
+    call datawrt
+    ldi r16, '-'     
+    call datawrt
+    ldi r16, '7'     
+    call datawrt
+    ldi r16, ')'     
+    call datawrt
+
+    ; Get day selection
+    call KPD_ISR
+    mov r21, r20     ; Store selected day in r21
+
+check_day_valid:    
+    ; Validate input (1-7)
+    cpi r21, '1'
+    brlo day_error
+    cpi r21, '8'
+    brsh day_error
+    rjmp day_valid
+
+day_error:
+    ; Display error message
+    ldi r16, 0xC0
+    call cmndwrt
+    ldi r16, 'I'
+    call datawrt
+    ldi r16, 'n'
+    call datawrt
+    ldi r16, 'v'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'l'
+    call datawrt
+    ldi r16, 'i'
+    call datawrt
+    ldi r16, 'd'
+    call datawrt
+    call DELAY_1s
+    ret
+
+day_valid:
+    ; Calculate offset for selected day
+    ; Each day has 5 prayer times, each time is 2 bytes
+    subi r21, '1'    ; Convert ASCII to 0-based index
+    ldi r22, 10      ; 5 times * 2 bytes = 10 bytes per day
+    mul r21, r22     ; Get offset to selected day's times
+
+display_prayers:
+    ; Clear display and setup header
+    ldi r16, 0x01    
+    call cmndwrt
+    call DELAY_2ms
+    
+    ; Initialize pointer to prayer times
+    ldi ZL, low(PrayerTimes*2)  ; Point to start of table
+    ldi ZH, high(PrayerTimes*2)
+    add ZL, r0       ; Add offset to get to selected day
+    adc ZH, r1
+
+    ; Display day header
+    ldi r16, 0x80    ; First line
+    call cmndwrt
+    
+    ldi r16, 'M'
+    call datawrt
+    ldi r16, 'a'
+    call datawrt
+    ldi r16, 'r'
+    call datawrt
+    ldi r16, ' '
+    call datawrt
+    mov r16, r21
+    inc r16
+    ori r16, 0x30    ; Convert to ASCII
+    call datawrt
+
+display_times:
+    ; Second line - display times
+    ldi r16, 0xC0    
+    call cmndwrt
+
+    ; Get and display all 5 prayer times
+    ldi r23, 5       ; Counter for 5 prayers
+
+next_prayer:
+    ; Load time from table (2 bytes)
+    lpm r16, Z+      ; Low byte
+    lpm r17, Z+      ; High byte
+
+    ; Convert to displayable format
+    ; First digit of hours
+    mov r18, r16
+    andi r18, 0xF0   ; Get high nibble
+    swap r18         ; Move to low nibble
+    ori r18, 0x30    ; Convert to ASCII
+    mov r16, r18
+    call datawrt
+
+    ; Second digit of hours
+    mov r18, r16
+    andi r18, 0x0F   ; Get low nibble
+    ori r18, 0x30    ; Convert to ASCII
+    mov r16, r18
+    call datawrt
+
+    ; Display colon
+    ldi r16, ':'
+    call datawrt
+
+    ; First digit of minutes
+    mov r18, r17
+    andi r18, 0xF0   ; Get high nibble
+    swap r18         ; Move to low nibble
+    ori r18, 0x30    ; Convert to ASCII
+    mov r16, r18
+    call datawrt
+
+    ; Second digit of minutes
+    mov r18, r17
+    andi r18, 0x0F   ; Get low nibble
+    ori r18, 0x30    ; Convert to ASCII
+    mov r16, r18
+    call datawrt
+
+    ; Add space between times
+    ldi r16, ' '
+    call datawrt
+
+    dec r23          ; Decrement prayer counter
+    brne next_prayer ; If not zero, display next prayer
+
+    ; Check for exit
+    call KPD_ISR
+    cpi r20, '*'
+    breq exit_prayer_display
+
+    ; Delay and continue displaying
+    call DELAY_1s
+    rjmp display_times
+
+exit_prayer_display:
+    ret
+
+; Prayer Times Lookup Table (HH:MM format stored as BCD)
+PrayerTimes: 
+    .dw 0437, 1149, 1507, 1741, 1900 ; March 4, 2024
+    .dw 0437, 1149, 1507, 1742, 1901 ; March 5, 2024
+    .dw 0437, 1149, 1508, 1742, 1901 ; March 6, 2024
+    .dw 0436, 1149, 1508, 1743, 1902 ; March 7, 2024
+    .dw 0435, 1149, 1509, 1744, 1903 ; March 8, 2024
+    .dw 0433, 1148, 1509, 1745, 1904 ; March 9, 2024
+    .dw 0432, 1148, 1509, 1746, 1905 ; March 10, 2024
+
+
+	;;;;;;;;;;;;;
+
+
+DELAY_1s:
+ldi r17,high(31250-1) 
+out OCR1AH,r20
+ldi r17, low(31250-1)
+out OCR1AL,R17
+ldi r17, 0 
+out TCNT1H,r17
+out TCNT1L,r17
+ldi r17,0x0
+out TCCR1A,r17
+ldi r17,0x4 
+out TCCR1B,r17
+AGAIN:
+IN R17,TIFR
+SBRS R17,OCF1A
+RJMP AGAIN
+LDI R17,1<<OCF1A
+OUT TIFR,R17 
+LDI R18, 0
+OUT TCCR1B, R18
+OUT TCCR1A, R18
+RET
+
+SDELAY:
+NOP
+NOP
+RET
